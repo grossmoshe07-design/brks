@@ -26,11 +26,16 @@ jobs:
 
     - name: 🔑 Generate and Export Secret Key
       id: generate_key
-      # This script generates a valid Fernet key and saves it to the environment variables for later steps.
+      # This step generates a unique key and uses PowerShell's Trim() method 
+      # to ensure no extra whitespace or newlines are included, resolving the length error.
       run: |
         $key = python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-        echo "PROPRIETARY_SECRET_KEY=$key" | Out-File -FilePath $env:GITHUB_ENV -Append
-      shell: powershell # Use PowerShell for Windows environment variable management
+        
+        # CORRECTED LINE: Trim() removes leading/trailing whitespace (e.g., newlines)
+        $key_clean = $key.Trim() 
+        
+        echo "PROPRIETARY_SECRET_KEY=$key_clean" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: powershell 
 
     - name: 📦 Build the Executable using PyInstaller
       # The PROPRIETARY_SECRET_KEY is passed here and read by video_tool.py during packaging.
@@ -40,7 +45,6 @@ jobs:
         PROPRIETARY_SECRET_KEY: ${{ env.PROPRIETARY_SECRET_KEY }}
       
     - name: Log Key FOR TESTING ONLY
-      # This is the corrected line. It prints the key to the logs for verification.
       # Remember to REMOVE this step for a production system to keep your key secret!
       run: |
         echo "The automatically generated key for this build is: ${{ env.PROPRIETARY_SECRET_KEY }}"
