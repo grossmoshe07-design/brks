@@ -3,10 +3,9 @@ from tkinter import filedialog, messagebox, ttk
 from cryptography.fernet import Fernet
 import os
 import sys
+import base64 
 
 # --- Configuration and Initialization ---
-# The core logic that retrieves the secret key.
-import base64 
 
 # PLACEHOLDER KEY (44 characters, valid Base64) for local testing.
 SECRET_KEY_PLACEHOLDER = b'aGVsbG9fZnJvbV9teV9hdXRvbWF0ZWRfYnVpbGRfc2VjcmV0' 
@@ -17,6 +16,7 @@ KEY_FROM_ENV = os.environ.get('PROPRIETARY_SECRET_KEY')
 if KEY_FROM_ENV:
     try:
         if len(KEY_FROM_ENV) != 44:
+             # This check validates that the GitHub Action fix worked
              raise ValueError(f"Environment key has incorrect length ({len(KEY_FROM_ENV)}). Expected 44 characters.")
         FERNET_KEY_BYTES = KEY_FROM_ENV.encode('utf-8')
     except Exception as e:
@@ -46,7 +46,6 @@ class VideoToolApp:
         master.geometry("600x450") 
         
         self.selected_file_path = ""
-        # State variable to track if the user has logged in to the converter
         self.is_converter_logged_in = False 
         
         # Application now starts directly on the main interface (no initial login screen)
@@ -54,20 +53,16 @@ class VideoToolApp:
 
     # --- Main Interface (Notebook UI) ---
     def create_main_interface(self):
-        # Create a Notebook (Tabbed Interface)
         self.notebook = ttk.Notebook(self.master)
         self.notebook.pack(pady=10, padx=10, expand=True, fill="both")
 
-        # Create the two main tabs
         self.converter_tab = tk.Frame(self.notebook, padding="10")
         self.player_tab = tk.Frame(self.notebook, padding="10")
 
         self.notebook.add(self.player_tab, text="▶️ Player (View .brks)")
         self.notebook.add(self.converter_tab, text="🎥 Converter (Login Required)")
 
-        # Player setup runs immediately (unlocked)
         self._setup_player_tab()
-        # Converter setup runs immediately, but starts in a locked state
         self._setup_converter_tab()
 
     # --- CONVERTER TAB LOGIC (LOCKED BY DEFAULT) ---
@@ -75,13 +70,10 @@ class VideoToolApp:
         self.converter_main_frame = tk.Frame(self.converter_tab, padding="10")
         self.converter_main_frame.pack(expand=True, fill="both")
 
-        # Create the Login Gate for the Converter
         self.conv_login_frame = self._create_converter_login_frame(self.converter_main_frame)
         self.conv_login_frame.pack(pady=50) 
 
-        # Create the actual Conversion Tools (initially hidden)
         self.conv_tools_frame = self._create_converter_tools_frame(self.converter_main_frame)
-        # self.conv_tools_frame is NOT packed initially.
     
     def _create_converter_login_frame(self, parent):
         frame = tk.Frame(parent)
@@ -162,7 +154,6 @@ class VideoToolApp:
 
     # --- PLAYER TAB LOGIC (UNLOCKED BY DEFAULT) ---
     def _setup_player_tab(self):
-        # The player functionality is available without any login required.
         tk.Button(self.player_tab, text=f"1. Open {CUSTOM_EXTENSION} Video File", command=self.open_proprietary_file).pack(pady=10, padx=10)
         
         self.player_status_label = tk.Label(self.player_tab, text=f"Status: Ready to load proprietary {CUSTOM_EXTENSION} file.", wraplength=400)
@@ -191,7 +182,6 @@ class VideoToolApp:
                 
                 encrypted_data = f.read()
             
-            # This decryption uses the key baked into the EXE
             decrypted_data = FERNET.decrypt(encrypted_data)
             
             # --- REAL-TIME VIDEO PLAYBACK LOGIC WOULD GO HERE ---
