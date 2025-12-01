@@ -54,5 +54,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: proprietary-video-tool-exe
-        path: dist/video_tool.exe # This is usually correct, but try using a wildcard if it fails again
+        path: dist/*.exe # This is usually correct, but try using a wildcard if it fails again
       
