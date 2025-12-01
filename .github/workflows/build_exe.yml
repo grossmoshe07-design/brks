@@ -26,16 +26,17 @@ jobs:
 
     - name: 🔑 Generate and Export Secret Key
       id: generate_key
-      # This step generates a unique key and uses PowerShell's Trim() method 
-      # to ensure no extra whitespace or newlines are included, resolving the length error.
       run: |
-        $key = python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+        # Use $() to execute Python and capture only the output of the print statement.
+        # This is often more reliable than trimming a variable.
+        $key_output = $(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode(), end='')")
         
-        # CORRECTED LINE: Trim() removes leading/trailing whitespace (e.g., newlines)
-        $key_clean = $key.Trim() 
+        # Verify length before export (optional, but good for debugging)
+        Write-Host "Generated Key Length: $($key_output.Length)"
         
-        echo "PROPRIETARY_SECRET_KEY=$key_clean" | Out-File -FilePath $env:GITHUB_ENV -Append
-      shell: powershell 
+        # Export the clean key (no extra characters/newlines)
+        echo "PROPRIETARY_SECRET_KEY=$key_output" | Out-File -FilePath $env:GITHUB_ENV -Append
+      shell: powershell # Must use powershell 
 
     - name: 📦 Build the Executable using PyInstaller
       # The PROPRIETARY_SECRET_KEY is passed here and read by video_tool.py during packaging.
