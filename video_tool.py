@@ -11,26 +11,34 @@ import base64
 SECRET_KEY_PLACEHOLDER = b'aGVsbG9fZnJvbV9teV9hdXRvbWF0ZWRfYnVpbGRfc2VjcmV0' 
 FERNET_KEY_BYTES = None
 
-KEY_FROM_ENV = os.environ.get('PROPRIETARY_SECRET_KEY')
+KEY_FROM_ENV = os.environ.get('PROPRIETARY_SECRET_KEY', '').strip()
 
 if KEY_FROM_ENV:
     try:
-        if len(KEY_FROM_ENV) != 44:
-             # This check validates that the GitHub Action fix worked
-             raise ValueError(f"Environment key has incorrect length ({len(KEY_FROM_ENV)}). Expected 44 characters.")
-        # FIXED: KEY_FROM_ENV is already a base64-encoded string, use it directly as bytes
-        FERNET_KEY_BYTES = KEY_FROM_ENV.encode('utf-8')
+        # Strip any whitespace, including newlines and carriage returns
+        key_clean = KEY_FROM_ENV.strip()
+        
+        if len(key_clean) != 44:
+             raise ValueError(f"Environment key has incorrect length ({len(key_clean)}). Expected 44 characters.")
+        
+        # Verify it's valid base64 before using it
+        FERNET_KEY_BYTES = key_clean.encode('utf-8')
+        # Test by attempting to create Fernet object
+        test_fernet = Fernet(FERNET_KEY_BYTES)
+        print("✓ Environment key validated successfully.")
     except Exception as e:
         print(f"Error processing environment key: {e}. Falling back to placeholder.")
         FERNET_KEY_BYTES = SECRET_KEY_PLACEHOLDER
 else:
+    print("No environment key found. Using placeholder key.")
     FERNET_KEY_BYTES = SECRET_KEY_PLACEHOLDER
 
 try:
-    # FIXED: Fernet expects the key as base64-encoded bytes (already what we have)
+    # Fernet expects the key as base64-encoded bytes (already what we have)
     FERNET = Fernet(FERNET_KEY_BYTES)
 except ValueError as e:
     print(f"Key loaded: {FERNET_KEY_BYTES}")
+    print(f"Key length: {len(FERNET_KEY_BYTES)}")
     raise ValueError(f"Failed to initialize Fernet. Key length: {len(FERNET_KEY_BYTES)}. Detail: {e}")
 
 # Changed extension to .brks
