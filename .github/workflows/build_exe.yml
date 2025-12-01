@@ -40,7 +40,7 @@ jobs:
     - name: 📦 Build the Executable using PyInstaller
       # The PROPRIETARY_SECRET_KEY is passed here and read by video_tool.py during packaging.
       run: |
-        pyinstaller --onedir --windowed video_tool.py
+        pyinstaller --onefile --windowed video_tool.py
       env:
         PROPRIETARY_SECRET_KEY: ${{ env.PROPRIETARY_SECRET_KEY }}
       
@@ -54,5 +54,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: proprietary-video-tool-exe
-        path: dist/*.exe # This is usually correct, but try using a wildcard if it fails again
-      
+        path: dist/video_tool.exe
