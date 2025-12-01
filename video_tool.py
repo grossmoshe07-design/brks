@@ -6,7 +6,24 @@ import sys
 
 # --- Configuration ---
 # THIS SECRET KEY IS THE FOUNDATION OF YOUR PROPRIETARY SYSTEM
-SECRET_KEY = b'MySecretFernetKey12345678901234567890='
+# The script will now check the environment variable 'PROPRIETARY_SECRET_KEY'
+# NOTE: This placeholder key MUST be 44 characters long and Base64-encoded to work.
+# This placeholder is ONLY used if you run the script locally without setting the environment variable.
+SECRET_KEY_PLACEHOLDER = b'aGVsbG9fZnJvbV9teV9hdXRvbWF0ZWRfYnVpbGRfc2VjcmV0' 
+
+# Load the key from the environment variable set by GitHub Actions, 
+# or use the placeholder if running locally without the environment variable set.
+KEY_FROM_ENV = os.environ.get('PROPRIETARY_SECRET_KEY')
+
+if KEY_FROM_ENV:
+    # Key is loaded from the environment set during the CI build
+    SECRET_KEY = KEY_FROM_ENV.encode('utf-8')
+    # print("Using key from environment variable.") # This line is commented out but would confirm successful injection
+else:
+    # Key is loaded from the hardcoded placeholder
+    SECRET_KEY = SECRET_KEY_PLACEHOLDER
+    # print("Using placeholder key (for local testing only).") # For local testing confirmation
+    
 FERNET = Fernet(SECRET_KEY)
 CUSTOM_EXTENSION = ".myformat"
 CUSTOM_HEADER = b'MY_PROPRIETARY_HEADER_V1_0'
@@ -169,10 +186,7 @@ class VideoToolApp:
             
             # 4. Player Integration (Concept)
             # --- REAL-TIME VIDEO PLAYBACK LOGIC GOES HERE ---
-            # To be truly self-contained and play video, you would need 
-            # to integrate a library like FFmpeg (via ffpyplayer) or something similar 
-            # and stream the 'decrypted_data' buffer to the player window.
-            # This is where the 'no other codecs' requirement is satisfied by the library.
+            # This is where the video playback engine would stream the decrypted_data buffer.
             
             # Success Message:
             self.player_status_label.config(text="Status: Decryption SUCCESS. Video is ready for playback.", fg="green")
