@@ -26,29 +26,22 @@ jobs:
 
     - name: 🔑 Generate and Export Secret Key
       id: generate_key
-      # This step generates a unique key and uses PowerShell's Trim() method 
-      # to ensure no extra whitespace or newlines are included, resolving the length error.
       run: |
-        $key = python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-        
-        # CORRECTED LINE: Trim() removes leading/trailing whitespace (e.g., newlines)
-        $key_clean = $key.Trim() 
-        
-        echo "PROPRIETARY_SECRET_KEY=$key_clean" | Out-File -FilePath $env:GITHUB_ENV -Append
+        $key = python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" | ForEach-Object { $_.Trim() }
+        echo "PROPRIETARY_SECRET_KEY=$key" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding UTF8
       shell: powershell 
 
     - name: 📦 Build the Executable using PyInstaller
-      # The PROPRIETARY_SECRET_KEY is passed here and read by video_tool.py during packaging.
       run: |
         pyinstaller --onefile --windowed video_tool.py
       env:
         PROPRIETARY_SECRET_KEY: ${{ env.PROPRIETARY_SECRET_KEY }}
       
     - name: Log Key FOR TESTING ONLY
-      # Remember to REMOVE this step for a production system to keep your key secret!
       run: |
+        echo "Key length: ${{ env.PROPRIETARY_SECRET_KEY }}" | Measure-Object -Character
         echo "The automatically generated key for this build is: ${{ env.PROPRIETARY_SECRET_KEY }}"
-      shell: bash
+      shell: powershell
 
     - name: 📤 Upload Executable artifact
       uses: actions/upload-artifact@v4
