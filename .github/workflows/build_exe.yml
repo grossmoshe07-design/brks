@@ -33,16 +33,15 @@ jobs:
       shell: powershell # Use PowerShell for Windows environment variable management
 
     - name: 📦 Build the Executable using PyInstaller
-      # This step builds the EXE, using the environment variable set in the previous step,
-      # which is read by the video_tool.py script during packaging.
+      # The PROPRIETARY_SECRET_KEY is passed here and read by video_tool.py during packaging.
       run: |
         pyinstaller --onefile --windowed video_tool.py
       env:
         PROPRIETARY_SECRET_KEY: ${{ env.PROPRIETARY_SECRET_KEY }}
       
-    - name: ⚠️ IMPORTANT: Log Key (FOR TESTING ONLY)
-      # WARNING: This exposes your key in the public build logs. REMOVE this step 
-      # for a production system or if your repository is public.
+    - name: Log Key FOR TESTING ONLY
+      # This is the corrected line. It prints the key to the logs for verification.
+      # Remember to REMOVE this step for a production system to keep your key secret!
       run: |
         echo "The automatically generated key for this build is: ${{ env.PROPRIETARY_SECRET_KEY }}"
       shell: bash
