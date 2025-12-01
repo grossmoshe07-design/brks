@@ -18,6 +18,7 @@ if KEY_FROM_ENV:
         if len(KEY_FROM_ENV) != 44:
              # This check validates that the GitHub Action fix worked
              raise ValueError(f"Environment key has incorrect length ({len(KEY_FROM_ENV)}). Expected 44 characters.")
+        # FIXED: KEY_FROM_ENV is already a base64-encoded string, use it directly as bytes
         FERNET_KEY_BYTES = KEY_FROM_ENV.encode('utf-8')
     except Exception as e:
         print(f"Error processing environment key: {e}. Falling back to placeholder.")
@@ -26,6 +27,7 @@ else:
     FERNET_KEY_BYTES = SECRET_KEY_PLACEHOLDER
 
 try:
+    # FIXED: Fernet expects the key as base64-encoded bytes (already what we have)
     FERNET = Fernet(FERNET_KEY_BYTES)
 except ValueError as e:
     print(f"Key loaded: {FERNET_KEY_BYTES}")
