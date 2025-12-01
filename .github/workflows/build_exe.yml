@@ -26,23 +26,26 @@ jobs:
 
     - name: 🔑 Generate and Export Secret Key
       id: generate_key
+      # This step generates a unique key and uses PowerShell's Trim() method 
+      # to ensure no extra whitespace or newlines are included, resolving the length error.
       run: |
-        # IMPORTANT FIX: Use end='' in Python print to suppress the newline, 
-        # preventing the key length from becoming 48.
-        $key_output = $(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode(), end='')")
+        $key = python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
         
-        # Export the clean, 44-character key
-        echo "PROPRIETARY_SECRET_KEY=$key_output" | Out-File -FilePath $env:GITHUB_ENV -Append
+        # CORRECTED LINE: Trim() removes leading/trailing whitespace (e.g., newlines)
+        $key_clean = $key.Trim() 
+        
+        echo "PROPRIETARY_SECRET_KEY=$key_clean" | Out-File -FilePath $env:GITHUB_ENV -Append
       shell: powershell 
 
     - name: 📦 Build the Executable using PyInstaller
-      # Running with --onedir as suggested by the last successful build log
+      # The PROPRIETARY_SECRET_KEY is passed here and read by video_tool.py during packaging.
       run: |
-        pyinstaller --onedir --windowed video_tool.py
+        pyinstaller --onefile --windowed video_tool.py
       env:
         PROPRIETARY_SECRET_KEY: ${{ env.PROPRIETARY_SECRET_KEY }}
       
     - name: Log Key FOR TESTING ONLY
+      # Remember to REMOVE this step for a production system to keep your key secret!
       run: |
         echo "The automatically generated key for this build is: ${{ env.PROPRIETARY_SECRET_KEY }}"
       shell: bash
@@ -51,5 +54,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: proprietary-video-tool-exe
-        # Uploads the entire output folder (needed for --onedir build)
-        path: dist/video_tool/
+        path: dist/video_tool.exe
