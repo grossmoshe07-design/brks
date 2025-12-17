@@ -2,207 +2,205 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from cryptography.fernet import Fernet
 import os
-import sys
-import base64 
 
-# --- Configuration and Initialization ---
+# -------------------------------------------------
+# Configuration and Initialization
+# -------------------------------------------------
 
-# PLACEHOLDER KEY (44 characters, valid Base64) for local testing.
-SECRET_KEY_PLACEHOLDER = 'aGVsbG9fZnJvbV9teV9hdXRvbWF0ZWRfYnVpbGRfc2VjcmV0'
-FERNET_KEY_BYTES = None
+# Generate / use a valid Fernet key (44 chars, base64)
+# In production, load this from a secure environment variable
+SECRET_KEY_PLACEHOLDER = Fernet.generate_key()
 
 KEY_FROM_ENV = os.environ.get('PROPRIETARY_SECRET_KEY', '').strip()
 
 if KEY_FROM_ENV:
     try:
-        # Strip any whitespace, including newlines and carriage returns
         key_clean = KEY_FROM_ENV.strip()
-        
         if len(key_clean) != 44:
-             raise ValueError(f"Environment key has incorrect length ({len(key_clean)}). Expected 44 characters.")
-        
-        # Key is a string, encode to bytes for Fernet
-        FERNET_KEY_BYTES = key_clean.encode('utf-8')
-        # Test by attempting to create Fernet object
-        test_fernet = Fernet(FERNET_KEY_BYTES)
+            raise ValueError("Invalid key length")
+        FERNET_KEY_BYTES = key_clean.encode("utf-8")
+        Fernet(FERNET_KEY_BYTES)
         print("✓ Environment key validated successfully.")
     except Exception as e:
-        print(f"Error processing environment key: {e}. Falling back to placeholder.")
-        FERNET_KEY_BYTES = SECRET_KEY_PLACEHOLDER.encode('utf-8')
+        print(f"Invalid environment key, using placeholder: {e}")
+        FERNET_KEY_BYTES = SECRET_KEY_PLACEHOLDER
 else:
     print("No environment key found. Using placeholder key.")
-    FERNET_KEY_BYTES = SECRET_KEY_PLACEHOLDER.encode('utf-8')
+    FERNET_KEY_BYTES = SECRET_KEY_PLACEHOLDER
 
-try:
-    # Fernet expects the key as base64-encoded bytes (already what we have)
-    FERNET = Fernet(FERNET_KEY_BYTES)
-except ValueError as e:
-    print(f"Key loaded: {FERNET_KEY_BYTES}")
-    print(f"Key length: {len(FERNET_KEY_BYTES)}")
-    raise ValueError(f"Failed to initialize Fernet. Key length: {len(FERNET_KEY_BYTES)}. Detail: {e}")
+FERNET = Fernet(FERNET_KEY_BYTES)
 
-# Changed extension to .brks
-CUSTOM_EXTENSION = ".brks" 
-CUSTOM_HEADER = b'MY_PROPRIETARY_HEADER_V1_0'
+CUSTOM_EXTENSION = ".brks"
+CUSTOM_HEADER = b"MY_PROPRIETARY_HEADER_V1_0"
 HEADER_LENGTH = len(CUSTOM_HEADER)
-# --- End Configuration ---
 
+# -------------------------------------------------
+# Main Application Class
+# -------------------------------------------------
 
-# --- Main Application Class ---
 class VideoToolApp:
     def __init__(self, master):
         self.master = master
         master.title("Proprietary Video Converter & Player")
-        master.geometry("600x450") 
-        
-        self.selected_file_path = ""
-        self.is_converter_logged_in = False 
-        
-        # Application now starts directly on the main interface (no initial login screen)
-        self.create_main_interface() 
+        master.geometry("600x450")
 
-    # --- Main Interface (Notebook UI) ---
+        self.selected_file_path = ""
+        self.is_converter_logged_in = False
+
+        self.create_main_interface()
+
+    # -------------------------------------------------
+    # Main UI
+    # -------------------------------------------------
+
     def create_main_interface(self):
         self.notebook = ttk.Notebook(self.master)
         self.notebook.pack(pady=10, padx=10, expand=True, fill="both")
 
-        self.converter_tab = tk.Frame(self.notebook, padding="10")
-        self.player_tab = tk.Frame(self.notebook, padding="10")
+        self.player_tab = ttk.Frame(self.notebook, padding=10)
+        self.converter_tab = ttk.Frame(self.notebook, padding=10)
 
-        self.notebook.add(self.player_tab, text="▶️ Player (View .brks)")
-        self.notebook.add(self.converter_tab, text="🎥 Converter (Login Required)")
+        self.notebook.add(self.player_tab, text="▶ Player (.brks)")
+        self.notebook.add(self.converter_tab, text="🎥 Converter (Login)")
 
         self._setup_player_tab()
         self._setup_converter_tab()
 
-    # --- CONVERTER TAB LOGIC (LOCKED BY DEFAULT) ---
+    # -------------------------------------------------
+    # Converter Tab
+    # -------------------------------------------------
+
     def _setup_converter_tab(self):
-        self.converter_main_frame = tk.Frame(self.converter_tab, padding="10")
+        self.converter_main_frame = ttk.Frame(self.converter_tab, padding=10)
         self.converter_main_frame.pack(expand=True, fill="both")
 
         self.conv_login_frame = self._create_converter_login_frame(self.converter_main_frame)
-        self.conv_login_frame.pack(pady=50) 
+        self.conv_login_frame.pack(pady=50)
 
         self.conv_tools_frame = self._create_converter_tools_frame(self.converter_main_frame)
-    
+
     def _create_converter_login_frame(self, parent):
-        frame = tk.Frame(parent)
-        tk.Label(frame, text="*** Login Required to Access Converter Tools ***", fg="red", font=('Arial', 12, 'bold')).grid(row=0, column=0, columnspan=2, pady=10)
-        
-        tk.Label(frame, text="Username:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-        self.user_entry = tk.Entry(frame)
-        self.user_entry.grid(row=1, column=1, padx=10, pady=5)
-        
-        tk.Label(frame, text="Password:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
-        self.pass_entry = tk.Entry(frame, show="*")
-        self.pass_entry.grid(row=2, column=1, padx=10, pady=5)
-        
-        tk.Button(frame, text="Login & Enable Converter", command=self._attempt_converter_login).grid(row=3, column=0, columnspan=2, pady=10)
+        frame = ttk.Frame(parent)
+
+        ttk.Label(frame, text="*** Login Required to Access Converter Tools ***",
+                  foreground="red", font=("Arial", 12, "bold")).grid(row=0, column=0, columnspan=2, pady=10)
+
+        ttk.Label(frame, text="Username:").grid(row=1, column=0, sticky="w", pady=5)
+        self.user_entry = ttk.Entry(frame)
+        self.user_entry.grid(row=1, column=1, pady=5)
+
+        ttk.Label(frame, text="Password:").grid(row=2, column=0, sticky="w", pady=5)
+        self.pass_entry = ttk.Entry(frame, show="*")
+        self.pass_entry.grid(row=2, column=1, pady=5)
+
+        ttk.Button(frame, text="Login & Enable Converter",
+                   command=self._attempt_converter_login).grid(row=3, column=0, columnspan=2, pady=10)
+
         return frame
 
     def _create_converter_tools_frame(self, parent):
-        frame = tk.Frame(parent, padding="10")
-        
-        tk.Button(frame, text="1. Select Standard MP4 Video", command=self.select_source_file).pack(pady=10, padx=10)
-        
-        self.conv_file_label = tk.Label(frame, text="No file selected.", wraplength=400)
+        frame = ttk.Frame(parent, padding=10)
+
+        ttk.Button(frame, text="1. Select MP4 Video",
+                   command=self.select_source_file).pack(pady=10)
+
+        self.conv_file_label = ttk.Label(frame, text="No file selected.", wraplength=400)
         self.conv_file_label.pack(pady=5)
-        
-        tk.Button(frame, text=f"2. CONVERT and Encrypt to {CUSTOM_EXTENSION}", command=self.convert_file).pack(pady=20, padx=10)
-        
-        self.conv_status_label = tk.Label(frame, text="Status: Ready.", fg="blue")
+
+        ttk.Button(frame, text=f"2. Convert & Encrypt to {CUSTOM_EXTENSION}",
+                   command=self.convert_file).pack(pady=20)
+
+        self.conv_status_label = ttk.Label(frame, text="Status: Ready.", foreground="blue")
         self.conv_status_label.pack(pady=10)
-        
+
         return frame
 
     def _attempt_converter_login(self):
         if self.user_entry.get() == "admin" and self.pass_entry.get() == "secure123":
             self.is_converter_logged_in = True
-            self.conv_login_frame.pack_forget() 
-            self.conv_tools_frame.pack(expand=True, fill="both") 
-            messagebox.showinfo("Login Success", "Converter Tools are now enabled.")
+            self.conv_login_frame.pack_forget()
+            self.conv_tools_frame.pack(expand=True, fill="both")
+            messagebox.showinfo("Login Success", "Converter tools enabled.")
         else:
             messagebox.showerror("Login Failed", "Invalid username or password.")
-            
+
     def select_source_file(self):
         file_path = filedialog.askopenfilename(
-            defaultextension=".mp4",
-            filetypes=[("MP4 Video files", "*.mp4"), ("All files", "*.*")]
+            filetypes=[("MP4 files", "*.mp4"), ("All files", "*.*")]
         )
         if file_path:
             self.selected_file_path = file_path
-            self.conv_file_label.config(text=f"Selected: {os.path.basename(file_path)}")
-            self.conv_status_label.config(text="Status: File selected. Ready to convert.", fg="blue")
+            self.conv_file_label.config(text=os.path.basename(file_path))
+            self.conv_status_label.config(text="Status: Ready to convert.", foreground="blue")
 
     def convert_file(self):
         if not self.selected_file_path:
-            messagebox.showerror("Error", "Please select a source file first.")
+            messagebox.showerror("Error", "No source file selected.")
             return
 
         try:
-            self.conv_status_label.config(text="Status: Reading and encrypting...", fg="orange")
-            self.master.update() 
-            
-            with open(self.selected_file_path, 'rb') as f:
+            self.conv_status_label.config(text="Encrypting...", foreground="orange")
+            self.master.update()
+
+            with open(self.selected_file_path, "rb") as f:
                 original_data = f.read()
 
             encrypted_data = FERNET.encrypt(original_data)
 
-            base_name = os.path.splitext(self.selected_file_path)[0]
-            output_path = base_name + CUSTOM_EXTENSION
-            
-            with open(output_path, 'wb') as f:
+            output_path = os.path.splitext(self.selected_file_path)[0] + CUSTOM_EXTENSION
+
+            with open(output_path, "wb") as f:
                 f.write(CUSTOM_HEADER)
                 f.write(encrypted_data)
-            
-            self.conv_status_label.config(text=f"Status: SUCCESS! Output: {os.path.basename(output_path)}", fg="green")
-            messagebox.showinfo("Success", f"File successfully converted and encrypted to:\n{output_path}")
+
+            self.conv_status_label.config(text="Conversion successful!", foreground="green")
+            messagebox.showinfo("Success", f"Created file:\n{output_path}")
 
         except Exception as e:
-            self.conv_status_label.config(text="Status: CONVERSION FAILED.", fg="red")
-            messagebox.showerror("Conversion Error", f"An error occurred: {e}")
+            self.conv_status_label.config(text="Conversion failed", foreground="red")
+            messagebox.showerror("Error", str(e))
 
-    # --- PLAYER TAB LOGIC (UNLOCKED BY DEFAULT) ---
+    # -------------------------------------------------
+    # Player Tab
+    # -------------------------------------------------
+
     def _setup_player_tab(self):
-        tk.Button(self.player_tab, text=f"1. Open {CUSTOM_EXTENSION} Video File", command=self.open_proprietary_file).pack(pady=10, padx=10)
-        
-        self.player_status_label = tk.Label(self.player_tab, text=f"Status: Ready to load proprietary {CUSTOM_EXTENSION} file.", wraplength=400)
-        self.player_status_label.pack(pady=10)
-        
-        tk.Label(self.player_tab, text="Video Display Area (Requires C-based Library Integration)").pack(pady=20)
+        ttk.Button(self.player_tab, text=f"Open {CUSTOM_EXTENSION} File",
+                   command=self.open_proprietary_file).pack(pady=10)
 
+        self.player_status_label = ttk.Label(
+            self.player_tab,
+            text=f"Status: Ready to load {CUSTOM_EXTENSION} file.",
+            wraplength=400
+        )
+        self.player_status_label.pack(pady=10)
+
+        ttk.Label(self.player_tab, text="Video playback placeholder").pack(pady=20)
 
     def open_proprietary_file(self):
         file_path = filedialog.askopenfilename(
-            defaultextension=CUSTOM_EXTENSION,
-            filetypes=[(f"Custom Video files", f"*{CUSTOM_EXTENSION}"), ("All files", "*.*")]
+            filetypes=[("Proprietary Video", f"*{CUSTOM_EXTENSION}"), ("All files", "*.*")]
         )
-        
         if file_path:
-            self.player_status_label.config(text=f"Status: Attempting to load and decrypt {os.path.basename(file_path)}...", fg="blue")
-            self.master.update() 
             self.play_proprietary_file(file_path)
 
     def play_proprietary_file(self, file_path):
         try:
-            with open(file_path, 'rb') as f:
-                header_check = f.read(HEADER_LENGTH)
-                if header_check != CUSTOM_HEADER:
-                    raise ValueError("File is not a valid proprietary format (Missing Header).")
-                
+            with open(file_path, "rb") as f:
+                header = f.read(HEADER_LENGTH)
+                if header != CUSTOM_HEADER:
+                    raise ValueError("Invalid file header")
                 encrypted_data = f.read()
-            
-            decrypted_data = FERNET.decrypt(encrypted_data)
-            
-            # --- REAL-TIME VIDEO PLAYBACK LOGIC WOULD GO HERE ---
-            
-            self.player_status_label.config(text="Status: Decryption SUCCESS. Video is ready for playback.", fg="green")
-            messagebox.showinfo("Playback Success", 
-                                f"Video file decrypted successfully. The embedded player would now be rendering the video stream.")
+
+            FERNET.decrypt(encrypted_data)
+
+            self.player_status_label.config(text="Decryption successful!", foreground="green")
+            messagebox.showinfo("Success", "Video decrypted successfully.")
 
         except Exception as e:
-            self.player_status_label.config(text="Status: Playback FAILED.", fg="red")
-            messagebox.showerror("Playback Error", f"Cannot play this file. Only authorized files can be viewed. Error: {e}")
+            self.player_status_label.config(text="Playback failed", foreground="red")
+            messagebox.showerror("Error", str(e))
+
 
 if __name__ == "__main__":
     root = tk.Tk()
